@@ -1,0 +1,275 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MobileScope Lab</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #080d18;
+  color: #e8eefc;
+  font-family: Arial, sans-serif;
+  padding: 22px;
+}
+
+.container {
+  max-width: 650px;
+  margin: auto;
+}
+
+header {
+  padding: 22px 0;
+}
+
+h1 {
+  font-size: 27px;
+  color: #60a5fa;
+}
+
+.subtitle {
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+.card {
+  background: #111c2e;
+  border: 1px solid #263750;
+  border-radius: 14px;
+  padding: 19px;
+  margin: 15px 0;
+}
+
+h2 {
+  font-size: 17px;
+  margin-bottom: 14px;
+}
+
+.info {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid #263750;
+  font-size: 13px;
+}
+
+.info span:first-child {
+  color: #94a3b8;
+}
+
+.value {
+  color: #60a5fa;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+button {
+  background: #2563eb;
+  color: white;
+  border: 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 5px 3px 5px 0;
+  cursor: pointer;
+}
+
+button.stop {
+  background: #dc3545;
+}
+
+button.secondary {
+  background: #334155;
+}
+
+video, img {
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 12px;
+  background: #000;
+}
+
+input {
+  max-width: 100%;
+  margin-top: 10px;
+}
+
+.status {
+  color: #34d399;
+}
+
+footer {
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+  padding: 25px 0;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <h1>MobileScope Lab</h1>
+  <p class="subtitle">Personal Mobile Security Research Lab</p>
+</header>
+
+<div class="card">
+  <h2>Device Information</h2>
+  <div class="info">
+    <span>Browser</span>
+    <span class="value" id="browser">Checking...</span>
+  </div>
+  <div class="info">
+    <span>Operating System</span>
+    <span class="value" id="os">Checking...</span>
+  </div>
+  <div class="info">
+    <span>Screen Resolution</span>
+    <span class="value" id="screen">Checking...</span>
+  </div>
+  <div class="info">
+    <span>Language</span>
+    <span class="value" id="language">Checking...</span>
+  </div>
+  <div class="info">
+    <span>Online Status</span>
+    <span class="value" id="online">Checking...</span>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Camera Permission Test</h2>
+  <p class="subtitle">Camera will only activate after your action.</p>
+  <p id="cameraStatus" class="status">Not started</p>
+  <button onclick="startCamera()">Start Camera</button>
+  <button class="stop" onclick="stopCamera()">Stop Camera</button>
+  <video id="camera" autoplay playsinline muted hidden></video>
+</div>
+
+<div class="card">
+  <h2>Microphone Permission Test</h2>
+  <p class="subtitle">Checks microphone permission without recording or transmitting audio.</p>
+  <p id="micStatus" class="status">Not started</p>
+  <button onclick="testMic()">Test Microphone</button>
+  <button class="stop" onclick="stopMic()">Stop Microphone</button>
+</div>
+
+<div class="card">
+  <h2>Photo Picker Test</h2>
+  <p class="subtitle">Select one photo manually from your device.</p>
+  <input type="file" accept="image/*" id="photo">
+  <img id="preview" hidden alt="Selected photo preview">
+</div>
+
+<footer>
+  MobileScope Lab · Personal Security Testing · v1.0
+</footer>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function showDeviceInfo() {
+  const ua = navigator.userAgent;
+
+  $("browser").textContent =
+    ua.includes("Chrome") ? "Chrome" : "Other Browser";
+
+  $("os").textContent =
+    /Android/i.test(ua) ? "Android" :
+    /iPhone|iPad/i.test(ua) ? "iOS" : "Other";
+
+  $("screen").textContent =
+    `${screen.width} × ${screen.height}`;
+
+  $("language").textContent = navigator.language;
+
+  $("online").textContent =
+    navigator.onLine ? "Online" : "Offline";
+}
+
+let cameraStream = null;
+let micStream = null;
+
+async function startCamera() {
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("HTTPS or supported browser required");
+    }
+
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false
+    });
+
+    $("camera").srcObject = cameraStream;
+    $("camera").hidden = false;
+    $("cameraStatus").textContent =
+      "Camera active — local preview only";
+  } catch (error) {
+    $("cameraStatus").textContent =
+      "Camera unavailable: " + error.message;
+  }
+}
+
+function stopCamera() {
+  cameraStream?.getTracks().forEach(track => track.stop());
+  cameraStream = null;
+  $("camera").srcObject = null;
+  $("camera").hidden = true;
+  $("cameraStatus").textContent = "Camera stopped";
+}
+
+async function testMic() {
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("HTTPS or supported browser required");
+    }
+
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: false
+    });
+
+    $("micStatus").textContent =
+      "Microphone permission granted — no recording";
+  } catch (error) {
+    $("micStatus").textContent =
+      "Microphone unavailable: " + error.message;
+  }
+}
+
+function stopMic() {
+  micStream?.getTracks().forEach(track => track.stop());
+  micStream = null;
+  $("micStatus").textContent = "Microphone stopped";
+}
+
+$("photo").addEventListener("change", event => {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  $("preview").src = url;
+  $("preview").hidden = false;
+});
+
+showDeviceInfo();
+
+window.addEventListener("online", showDeviceInfo);
+window.addEventListener("offline", showDeviceInfo);
+</script>
+
+</body>
+</html>
